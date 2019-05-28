@@ -66,7 +66,7 @@ def da_rnn(train_data: TrainData, n_targs: int, encoder_hidden_size=64, decoder_
     return train_cfg, da_rnn_net
 
 
-def train(net: DaRnnNet, train_data: TrainData, t_cfg: TrainConfig, n_epochs=10, save_plots=False):
+def train(net: DaRnnNet, train_data: TrainData, t_cfg: TrainConfig, scaler, n_epochs=10, save_plots=False):
     iter_per_epoch = int(np.ceil(t_cfg.train_size * 1. / t_cfg.batch_size))
     iter_losses = np.zeros(n_epochs * iter_per_epoch)
     epoch_losses = np.zeros(n_epochs)
@@ -92,18 +92,20 @@ def train(net: DaRnnNet, train_data: TrainData, t_cfg: TrainConfig, n_epochs=10,
         epoch_losses[e_i] = np.mean(iter_losses[range(e_i * iter_per_epoch, (e_i + 1) * iter_per_epoch)])
 
         if e_i % 10 == 0:
-            y_test_pred = predict(net, train_data,
+            y_test_pred = scaler.inverse_transform(np.concatenate([train_data.feats[t_cfg.train_size:],predict(net, train_data,
                                   t_cfg.train_size, t_cfg.batch_size, t_cfg.T,
-                                  on_train=False)
+                                  on_train=False)],axis=1))[:,-1]
+            y_test_true = scaler.inverse_transform(np.concatenate([train_data.feats[t_cfg.train_size:],train_data.targs[t_cfg.train_size:]],axis=1))[:,-1]
+
             # TODO: make this MSE and make it work for multiple inputs
-            val_loss = y_test_pred - train_data.targs[t_cfg.train_size:]
-            rmse = np.sqrt(np.mean(np.square(train_data.targs[t_cfg.train_size:] - y_test_pred)))
+            val_loss = y_test_pred - y_test_true
+            rmse = np.sqrt(np.mean(np.square(y_test_true - y_test_pred)))
             logger.info(f"Epoch {e_i:d}, train loss: {epoch_losses[e_i]:3.3f}, val loss: {np.mean(np.abs(val_loss))}, rmse: {rmse}.")
-            y_train_pred = predict(net, train_data,
-                                   t_cfg.train_size, t_cfg.batch_size, t_cfg.T,
-                                   on_train=True)
+            logger.info(f"PRED: {y_test_pred[-10:]}")
+            logger.info(f"TRUE: {y_test_true[-10:]}")
+
             plt.figure()
-            plt.plot(train_data.targs[t_cfg.train_size:],
+            plt.plot(y_test_true,
                      label="True")
             plt.plot(y_test_pred,
                      label='Predicted - Test')
@@ -192,7 +194,7 @@ data, scaler = preprocess_data(raw_data, targ_cols)
 
 da_rnn_kwargs = {"batch_size": 128, "T": 10}
 config, model = da_rnn(data, n_targs=len(targ_cols), learning_rate=.001, **da_rnn_kwargs)
-iter_loss, epoch_loss = train(model, data, config, n_epochs=10000, save_plots=save_plots)
+iter_loss, epoch_loss = train(model, data, config, scaler=scaler, n_epochs=1000, save_plots=save_plots)
 final_y_pred = predict(model, data, config.train_size, config.batch_size, config.T)
 
 plt.figure()
