@@ -97,7 +97,8 @@ def train(net: DaRnnNet, train_data: TrainData, t_cfg: TrainConfig, n_epochs=10,
                                   on_train=False)
             # TODO: make this MSE and make it work for multiple inputs
             val_loss = y_test_pred - train_data.targs[t_cfg.train_size:]
-            logger.info(f"Epoch {e_i:d}, train loss: {epoch_losses[e_i]:3.3f}, val loss: {np.mean(np.abs(val_loss))}.")
+            rmse = np.sqrt(np.mean(np.square(train_data.targs[-len(y_test_pred):] - y_test_pred)))
+            logger.info(f"Epoch {e_i:d}, train loss: {epoch_losses[e_i]:3.3f}, val loss: {np.mean(np.abs(val_loss))}, rmse: {rmse}.")
             y_train_pred = predict(net, train_data,
                                    t_cfg.train_size, t_cfg.batch_size, t_cfg.T,
                                    on_train=True)
@@ -109,7 +110,7 @@ def train(net: DaRnnNet, train_data: TrainData, t_cfg: TrainConfig, n_epochs=10,
             plt.plot(range(t_cfg.T + len(y_train_pred), len(train_data.targs) + 1), y_test_pred,
                      label='Predicted - Test')
             plt.legend(loc='upper left')
-            utils.save_or_show_plot(f"pred_{e_i}.png", save_plots)
+            utils.save_or_show_plot(f"pred_{e_i}_{rmse}.png", save_plots)
 
     return iter_losses, epoch_losses
 
