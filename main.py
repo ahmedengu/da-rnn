@@ -194,7 +194,7 @@ data, scaler = preprocess_data(raw_data, targ_cols)
 
 da_rnn_kwargs = {"batch_size": 128, "T": 10}
 config, model = da_rnn(data, n_targs=len(targ_cols), learning_rate=.001, **da_rnn_kwargs)
-iter_loss, epoch_loss = train(model, data, config, scaler=scaler, n_epochs=1000, save_plots=save_plots)
+iter_loss, epoch_loss = train(model, data, config, scaler=scaler, n_epochs=100, save_plots=save_plots)
 final_y_pred = predict(model, data, config.train_size, config.batch_size, config.T)
 
 plt.figure()
