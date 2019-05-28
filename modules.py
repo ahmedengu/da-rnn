@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.nn import functional as tf
+from constants import device
 
 
 def init_hidden(x, hidden_size: int):
@@ -29,12 +30,13 @@ class Encoder(nn.Module):
         self.attn_linear = nn.Linear(in_features=2 * hidden_size + T - 1, out_features=1)
 
     def forward(self, input_data):
+        input_data = input_data.to(device)
         # input_data: (batch_size, T - 1, input_size)
-        input_weighted = Variable(torch.zeros(input_data.size(0), self.T - 1, self.input_size))
-        input_encoded = Variable(torch.zeros(input_data.size(0), self.T - 1, self.hidden_size))
+        input_weighted = Variable(torch.zeros(input_data.size(0), self.T - 1, self.input_size)).to(device)
+        input_encoded = Variable(torch.zeros(input_data.size(0), self.T - 1, self.hidden_size)).to(device)
         # hidden, cell: initial states with dimension hidden_size
-        hidden = init_hidden(input_data, self.hidden_size)  # 1 * batch_size * hidden_size
-        cell = init_hidden(input_data, self.hidden_size)
+        hidden = init_hidden(input_data, self.hidden_size).to(device)  # 1 * batch_size * hidden_size
+        cell = init_hidden(input_data, self.hidden_size).to(device)
 
         for t in range(self.T - 1):
             # Eqn. 8: concatenate the hidden states with each predictor
@@ -83,9 +85,10 @@ class Decoder(nn.Module):
         # input_encoded: (batch_size, T - 1, encoder_hidden_size)
         # y_history: (batch_size, (T-1))
         # Initialize hidden and cell, (1, batch_size, decoder_hidden_size)
-        hidden = init_hidden(input_encoded, self.decoder_hidden_size)
-        cell = init_hidden(input_encoded, self.decoder_hidden_size)
-        context = Variable(torch.zeros(input_encoded.size(0), self.encoder_hidden_size))
+        input_encoded = input_encoded.to(device)
+        hidden = init_hidden(input_encoded, self.decoder_hidden_size).to(device)
+        cell = init_hidden(input_encoded, self.decoder_hidden_size).to(device)
+        context = Variable(torch.zeros(input_encoded.size(0), self.encoder_hidden_size)).to(device)
 
         for t in range(self.T - 1):
             # (batch_size, T, (2 * decoder_hidden_size + encoder_hidden_size))
